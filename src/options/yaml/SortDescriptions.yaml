@@ -1,0 +1,621 @@
+randomizers:
+  - methodName: randomize
+    name: Randomize
+    description: |
+      Fully randomizes the array, swapping each element with another random element.
+  - methodName: randomizeClose
+    name: Randomize (almost sorted)
+    description: |
+      Randomizes the array, but keeps the array almost sorted. Elements are only swapped with other nearby elements.
+sorts:
+  - methodName: slowSort
+    name: Slowsort
+    description: |
+      A sorting algorithm intended to be as slow as humanly possible, with a goal of a "multiply and surrender" sort (as opposed to the "divide and conquer" approach of the merge sort).
+    statistics:
+      stable: true
+      timeComplexity:
+        best: really really slow
+        avg:
+        worst:
+      spaceComplexity: n
+    algorithm: |
+      void slowsort(arr, start, end)
+          if start >= end
+              return
+          middle = (start + end) / 2
+          slowsort(arr, start, middle)      // (1)
+          slowsort(arr, middle + 1, end)    // (2)
+          if arr[middle] > arr[end]         // (3)
+              swap arr[middle], arr[end]
+          slowsort(start, end - 1)          // (4)
+    algorithmDescription: |
+      Slowsort first recursively sorts the first half (1) and second half (2) of the array. Afterward, it finds the maximum element of the entire array (3), located at the end of each half, and swaps this maximum element to the end of the array.
+  - methodName: stoogeSort
+    name: Stooge Sort
+    description: |
+      A recursive sorting algorithm notable for its inefficiency. The name of the algorithm comes from "The Three Stooges."
+    statistics:
+      stable: true
+      timeComplexity:
+        best: n ^ {log(3) / log(1.5)} ~ n ^ 2.7095
+        avg: n ^ {log(3) / log(1.5)} ~ n ^ 2.7095
+        worst: n ^ {log(3) / log(1.5)} ~ n ^ 2.7095
+      spaceComplexity: n
+    algorithm: |
+      void stoogesort(arr, start, end)
+          if arr[start] > arr[end]              // (1)
+              swap arr[start], arr[end]
+          if end - start < 2                    // (2)
+              return
+
+          third = (end - start + 1) / 3
+          stoogesort(arr, start, end - third)   // (3)
+          stoogesort(arr, start + third, end)   // (4)
+          stoogesort(arr, start, end - third)   // (5)
+    algorithmDescription: |
+      The Stooge sort algorithm starts by swapping the first and last element if they are out of order (1). Then, as long as there are at least 3 elements being looked at (2), we sort the first 2/3 of the list (3), then sort the last 2/3 of the list (4), and then sort the first 2/3 of the list again (5).
+  - methodName: bubbleSort
+    name: Bubble Sort
+    description: |
+      A simple sorting algorithm that goes through the list, looking for adjacent elements that are out of order, swapping them if they are. This algorithm gets its name from how elements "bubble" to the end of the array.
+    statistics:
+      stable: true
+      timeComplexity:
+        best: "1"
+        avg: n ^ 2
+        worst: n ^ 2
+      spaceComplexity: "1"
+    algorithm: |
+      void bubblesort(arr)
+          end = arr.length
+          repeat
+              swapped = false
+              for i = 0 to end - 1 inclusive    // (1)
+                  if arr[i] > arr[i+1]          // (2)
+                      swap arr[i], arr[i+1]
+                      swapped = true
+              end = end - 1                     // (3)
+          until not swapped                     // (4)
+    algorithmDescription: |
+      This implementation of bubble sort has been optimized slightly, taking into account that every pass through the array will put at least one element into its sorted position, building a sorted part at the end. This means that we only need to loop through the unsorted part of the array.
+      In bubble sort, we loop through the array (1), looking for a pair of adjacent elements that are out of order (2). When we find one, we swap the two elements into the correct order, and continue. At the end of a pass, we can decrement the end index (3), because we know that at least one more item is definitely sorted. This process continues until we have no more swaps left to make (4).
+  - methodName: oddEvenSort
+    name: Odd-Even Sort
+    description: |
+      Related to bubble sort, this algorithm looks at even and odd indexed pairs separately, and swaps elements that are out of order. The odd-even sort was originally developed for parallel processors, since the processors can alternate between looking at odd-even pairs and even-odd pairs.
+    statistics:
+      stable: true
+      timeComplexity:
+        best: n
+        avg: n ^ 2
+        worst: n ^ 2
+      spaceComplexity: "1"
+    algorithm: |
+      void oddEvenSort(arr)
+          repeat
+              swapped = false
+              for i = 0 to arr.length - 1, step 2   // (1)
+                  if arr[i] > arr[i + 1]            // (2)
+                      swap arr[i], arr[i + 1]
+                      swapped = true
+
+              for i = 1 to arr.length - 1, step 2   // (3)
+                  if arr[i] > arr[i + 1]
+                      swap arr[i], arr[i + 1]
+                      swapped = true
+          until not swapped                         // (4)
+    algorithmDescription: |
+      This algorithm alternates between iterating over the even indices (1) and odd indices (3), checking for pairs of elements that are out of place and swapping them (2). This way, first loop will only check for even-odd pairs of indices, and the second loop will only check odd-even pairs of indices. The algorithm is finished when no more swaps are made (4).
+      In essence, this algorithm exchanges elements between the loops, smaller elements moving to the left, and larger elements moving to the right, like a double bubble sort.
+  - methodName: selectionSort
+    name: Selection Sort
+    description: |
+      Similar to insertion sort, selection sort keeps track of a sorted and an unsorted part of the array, swapping the least element of the unsorted part into the sorted section. This algorithm generally performs worse than insertion sort, but is noteworthy for its simplicity.
+    statistics:
+      stable: false
+      timeComplexity:
+        best: n ^ 2
+        avg: n ^ 2
+        worst: n ^ 2
+      spaceComplexity: "1"
+    algorithm: |
+      for (int i = 0; i < arr.length - 1; i++) {
+          int minLocation = i;
+          for (int j = i + 1; j < arr.length; j++) {
+              if (compare(arr[minLocation], arr[j]) > 0) {  // arr[i] > arr[j]
+                  minLocation = j;
+              }
+
+              if (BREAK) return;
+          }
+
+          if (minLocation != i) { // Swap only if there's a new min
+              swap(i, minLocation);
+          }
+
+          arr[i].setColor(stgs.SORTEDITEMCOLOR);
+      }
+    algorithmDescription: |
+      ...
+  - methodName: insertionSort
+    name: Insertion Sort
+    description: |
+      ...
+    statistics:
+      stable: true
+      timeComplexity:
+        best: n
+        avg: n ^ 2
+        worst: n ^ 2
+      spaceComplexity: "1"
+    algorithm: |
+      public void insertionSort() {
+          for (int i = 0; i < arr.length; i++) {
+              int j;
+              for (j = i - 1; j >= 0 && compare(arr[j], arr[j + 1]) > 0; j--) {
+                  // Keep swapping until arr[i] is inserted into sorted head of arr
+                  swap(j, j + 1);
+              }
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: gnomeSort
+    name: Gnome Sort
+    description: |
+      ...
+    statistics:
+      stable: true
+      timeComplexity:
+        best: n
+        avg: n ^ 2
+        worst: n ^ 2
+      spaceComplexity: "1"
+    algorithm: |
+      public void gnomeSort() {
+          int index = 1;
+          while (index < arr.length) {
+              if (compare(arr[index - 1], arr[index]) > 0) {
+                  swap(index - 1, index);
+                  index--;
+              } else {
+                  index++;
+              }
+
+              if (index == 0) index = 1;
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: mergeSort
+    name: Merge Sort
+    description: |
+      ...
+    statistics:
+      stable: true
+      timeComplexity:
+        best: n log(n)
+        avg: n log(n)
+        worst: n log(n)
+      spaceComplexity: n
+    algorithm: |
+      private void mergeSort(int i, int j) {
+          // Base case; one or less element = sorted
+          if (i >= j - 1) return;
+
+          // Sort halves
+          int mid = (i + j) / 2;
+          mergeSort(i, mid);
+          mergeSort(mid, j);
+
+          // Merge two halves
+          int[] copiedVals = new int[arr.length];
+
+          for (int copiedValIndex = i; copiedValIndex < j; copiedValIndex++) {
+              // Don't need to copy everything since we're only using [i, j)
+              copiedVals[copiedValIndex] = getItemVal(copiedValIndex);
+          }
+
+          int left = i, right = mid;
+          for (int copiedIndex = i; copiedIndex < j; copiedIndex++) {
+              if (left < mid && (right >= j || compare(arr[left], arr[right], "Comparing items for merge") < 0)) {
+                  // Either right ran out or left is less than right
+                  copiedVals[copiedIndex] = getItemVal(left);
+                  left++;
+              } else {
+                  // Either left ran out or right is less than left
+                  copiedVals[copiedIndex] = getItemVal(right);
+                  right++;
+              }
+          }
+
+          // Copy to arr
+          for (int copiedIndex = i; copiedIndex < j; copiedIndex++) {
+              setItemVal(copiedIndex, copiedVals[copiedIndex], "Set merged array item");
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: iterativeMergeSort
+    name: Merge Sort (iterative)
+    description: |
+      ...
+    statistics:
+      stable: true
+      timeComplexity:
+        best: n log(n)
+        avg: n log(n)
+        worst: n log(n)
+      spaceComplexity: n
+    algorithm: |
+      public void iterativeMergeSort() {
+          for (int curBucketSize = 1; curBucketSize < arr.length; curBucketSize *= 2) {
+              for (int i = 0; i < arr.length - curBucketSize; i += 2 * curBucketSize) {
+                  int j = Math.min(arr.length, i + 2 * curBucketSize);
+                  int mid = i + curBucketSize;
+                  int left = i;
+                  int right = mid;
+
+                  // Merge two buckets
+                  int[] copiedVals = new int[arr.length];
+                  for (int copiedIndex = i; copiedIndex < j; copiedIndex++) {
+                      if (left < mid && (right >= j || compare(arr[left], arr[right]) < 0)) {
+                          // Either right ran out or left is less than right
+                          copiedVals[copiedIndex] = getItemVal(left);
+                          left++;
+                      } else {
+                          // Either left ran out or right is less than left
+                          copiedVals[copiedIndex] = getItemVal(right);
+                          right++;
+                      }
+                  }
+
+                  // Copy to arr
+                  for (int copiedIndex = i; copiedIndex < j; copiedIndex++) {
+                      setItemVal(copiedIndex, copiedVals[copiedIndex], "Set merged array item");
+                  }
+              }
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: quickSort
+    name: Quick Sort
+    description: |
+      ...
+    statistics:
+      stable: false
+      timeComplexity:
+        best: n log(n)
+        avg: n log(n)
+        worst: n ^ 2
+      spaceComplexity: log(n)
+    algorithm: |
+      private void quickSort(int i, int j) {
+          // Sorts from [i, j]; note inclusive i and j
+          if (i >= j) {
+              return;
+          }
+
+          if (BREAK) return;
+
+          // Partition
+          int mid = (i + j) / 2;
+
+          if (compare(arr[i], arr[mid], "Finding pivot") > 0) {
+              swap(i, mid, "Finding pivot");
+          }
+          if (compare(arr[i], arr[j], "Finding pivot") > 0) {
+              swap(i, j, "Finding pivot");
+          }
+          if (compare(arr[mid], arr[j], "Finding pivot") < 0) {
+              swap(mid, j, "Finding pivot");
+          }
+
+          int low = i;
+          changingVertLine = arr[low].x;
+          for (int cur = i; cur <= j; cur++) {
+              if (compare(arr[cur], arr[j], "Compare to pivot") < 0) {
+                  swap(low, cur, "Swap around pivot");
+                  low++;
+              }
+          }
+
+          // Swap pivot back to middle
+          swap(low, j, "Swap pivot to correct position");
+
+          // Quicksort halves
+          quickSort(i, low - 1);
+          quickSort(low + 1, j);
+      }
+    algorithmDescription: |
+      ...
+  - methodName: heapSort
+    name: Heapsort
+    description: |
+      ...
+    statistics:
+      stable: false
+      timeComplexity:
+        best: n log(n)
+        avg: n log(n)
+        worst: n log(n)
+      spaceComplexity: "1"
+    algorithm: |
+      public void heapSort() {
+          // Set heap color
+          for (Item it : arr) {
+              it.setColor(stgs.HEAPCOLOR);
+          }
+
+          // Create heap
+          heapify();
+
+          // Sort
+          for (int end = arr.length - 1; end >= 0; end--) {
+              // Largest element of heap is at the beginning; swap to end
+              swap(0, end, "Dequeue from heap");
+              arr[end].setColor(stgs.ITEMCOLOR);  // Item no longer in heap
+
+              // Rebuild heap
+              siftDown(0, end - 1);
+
+              if (BREAK) return;
+          }
+      }
+
+      private void heapify() {
+          for (int start = getHeapParent(arr.length - 1); start >= 0; start--) {
+              siftDown(start, arr.length - 1);
+          }
+      }
+
+      private void siftDown(int start, int end) {
+          int root = start;
+
+          while (getHeapLeftChild(root) <= end) {  // While has child
+              int child = getHeapLeftChild(root);
+
+              // If right child exists and is greater, use that instead
+              if (child + 1 <= end && compare(arr[child + 1], arr[child], "Get max child") > 0) {
+                  child++;  // left child = 2i+1, right child = 2i+2, so to point to right child, just +1
+              }
+
+              // If the greatest child is greater than the parent (root), then swap
+              if (compare(arr[child], arr[root], "Compare max child to root; check heap validity") > 0) {
+                  swap(child, root, "Swap child to root");
+                  // Sift down tree to test children
+                  root = child;
+              } else {
+                  // Already a heap, so don't need to do any more
+                  return;
+              }
+
+              if (BREAK) return;
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: lsdRadixSort
+    name: Radix Sort (LSD)
+    description: |
+      ...
+    statistics:
+      stable: true
+      timeComplexity: #                 ----------------------- TODO: define these variables
+        best:
+        avg: n * k/d
+        worst: n * k/d
+      spaceComplexity: n + 2^d
+    algorithm: |
+      public void lsdRadixSort() {
+          // Get maximum value of arr
+          int maxVal = getItemVal(0);
+          for (Item it : arr) {
+              maxVal = Math.max(maxVal, it.val);
+          }
+
+          // Get the most amount of digits in array values
+          int maxDigits = ("" + maxVal).length();
+
+          List<List<Integer>> buckets = new ArrayList<>(10);  // Values with each digit
+          for (int i = 0; i < 10; i++) {
+              buckets.add(new ArrayList<>());
+          }
+
+          // Radix sort
+          for (int exp = 0; exp < maxDigits; exp++) {
+
+              // Get counts
+              for (int i = 0; i < arr.length; i++) {
+                  int curVal = getItemVal(i);
+                  int curDigit = (int) (curVal / (Math.pow(10, exp))) % 10;
+
+                  buckets.get(curDigit).add(curVal);
+              }
+
+              // Set array values
+              int curBucket = 0;
+              int arrIndex = 0;
+              while (curBucket < 10) {
+                  if (buckets.get(curBucket).size() > 0) {
+                      setItemVal(arrIndex, buckets.get(curBucket).remove(0),
+                              "Set items for digit " + curBucket + " in " + (int) Math.pow(10, exp) + "s place");
+                      arrIndex++;
+                  } else {
+                      curBucket++;
+                  }
+              }
+
+              // Buckets are now all empty, so don't need to reset buckets
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: msdRadixSort
+    name: Radix Sort (MSD)
+    description: |
+      ...
+    statistics:
+      stable: true
+      timeComplexity:
+        best:
+        avg: n * k/d
+        worst: n * k/d
+      spaceComplexity: n + 2^d
+    algorithm: |
+      public void msdRadixSort() {
+          int maxVal = getItemVal(0);
+
+          for (int i = 0; i < arr.length; i++) {
+              maxVal = Math.max(maxVal, getItemVal(i));
+          }
+
+          // Get the most amount of digits in array values
+          int maxDigits = ("" + maxVal).length();
+
+          msdSortBucket(0, arr.length, maxDigits - 1);
+      }
+
+      private void msdSortBucket(int left, int right, int exp) {
+          List<List<Integer>> buckets = new ArrayList<>(10);  // Values with each digit
+          for (int i = 0; i < 10; i++) {
+              buckets.add(new ArrayList<>());
+          }
+
+          for (int i = left; i < right; i++) {
+              int curVal = getItemVal(i);
+              int curDigit = (int) (curVal / (Math.pow(10, exp))) % 10;
+              buckets.get(curDigit).add(curVal);
+          }
+
+          int curBucket = 0;
+          int arrIndex = left;
+          int[] bucketStartIndices = new int[11];
+          bucketStartIndices[0] = left;      // lower index bound of first bucket
+          bucketStartIndices[10] = right;    // upper index bound of last bucket
+          while (curBucket < 10) {  // Set original bucket vals
+              if (buckets.get(curBucket).size() > 0) {
+                  setItemVal(arrIndex, buckets.get(curBucket).remove(0),
+                          "Set items for digit " + curBucket + " in " + (int) Math.pow(10, exp) + "s place");
+                  arrIndex++;
+              } else {
+                  curBucket++;
+                  bucketStartIndices[curBucket] = arrIndex;
+              }
+          }
+
+          if (exp > 0) {
+              for (curBucket = 0; curBucket < 10; curBucket++) {
+                  int bucketStart = bucketStartIndices[curBucket];
+                  int bucketEnd = bucketStartIndices[curBucket + 1];
+
+                  int curBucketSize = bucketEnd - bucketStart;
+                  if (curBucketSize > 1) {
+                      msdSortBucket(bucketStart, bucketEnd, exp - 1);
+                  }
+              }
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: smoothSort
+    name: Smoothsort
+    description: |
+      ...
+    statistics:
+      stable: false
+      timeComplexity:
+        best: n
+        avg: n log(n)
+        worst: n log(n)
+      spaceComplexity: "1"
+    algorithm: |
+      ...
+    algorithmDescription: |
+      ...
+  - methodName: shellSort_Ciura
+    name: Shellsort
+    description: |
+      ...
+    statistics:
+      stable: false
+      timeComplexity:
+        best: n log(n)
+        avg: n ^ 4/3
+        worst: n ^ 3/2
+      spaceComplexity: "1"
+    algorithm: |
+      private void shellSort(String seqName) {
+          List<Integer> gaps = ShellsortGaps.getGaps(seqName, arr.length);
+          for (int gap : gaps) {
+              for (int i = gap; i < arr.length; i++) {
+                  for (int j = i; j >= gap && compare(arr[j - gap], arr[j], "Compare for gap " + gap) > 0; j -= gap) {
+                      swap(j, j - gap, "Gap-sort for gap " + gap);
+                  }
+              }
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: cycleSort
+    name: Cycle Sort
+    description: |
+      ...
+    statistics:
+      stable: false
+      timeComplexity:
+        best: n ^ 2
+        avg: n ^ 2
+        worst: n ^ 2
+      spaceComplexity: "1"
+    algorithm: |
+      public void cycleSort() {
+          for (int cycleStart = 0; cycleStart < arr.length; cycleStart++) {
+              int pos = cycleStart;
+              setTempItemVal(arr[pos].val);
+              for (int i = cycleStart + 1; i < arr.length; i++) {
+                  if (compare(arr[i], this.tempItem, "Find correct item position") < 0) {
+                      pos += 1;
+                  }
+              }
+
+              if (pos == cycleStart) {
+                  continue;
+              }
+
+              swapTemp(pos, "Swap item into correct position");
+
+              while (pos != cycleStart) {
+                  pos = cycleStart;
+                  for (int i = cycleStart + 1; i < arr.length; i++) {
+                      if (compare(arr[i], this.tempItem, "Find correct item position") < 0) {
+                          pos += 1;
+                      }
+                  }
+
+                  while (compare(arr[pos], this.tempItem, "Place after any duplicates") == 0) {
+                      pos += 1;
+                  }
+                  swapTemp(pos, "Swap item into correct position");
+              }
+          }
+      }
+    algorithmDescription: |
+      ...
+  - methodName: beadSort
+    name: Bead Sort
+    description: |
+      ...
+    statistics:
+      stable:
+      timeComplexity:
+        best: n
+        avg: sum of integers
+        worst: sum of integers
+      spaceComplexity: n^2
+    algorithm: |
+      ...
+    algorithmDescription: |
+      ...

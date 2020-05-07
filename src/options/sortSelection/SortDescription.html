@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <link href="SortDescription.css" rel="stylesheet" type="text/css">
+    <script crossorigin="anonymous"
+            integrity="sha256-sWRRk18sgo7+CF6eNBm/BByZ84FD5yC87JJ4A3kZg2k="
+            src="https://cdnjs.cloudflare.com/ajax/libs/xregexp/3.2.0/xregexp-all.min.js"></script>
+</head>
+<body>
+
+<div id="sort-name-header">
+    <h2 id="sort-name"></h2>
+</div>
+
+<div id="main">
+    <table id="statistics-box">
+        <thead>
+        <tr>
+            <th colspan="100%" id="statistics-box-title">
+                Statistics
+            </th>
+        </tr>
+        </thead>
+        <tbody class="table-hr">
+        <tr>
+            <th>Stable</th>
+            <td id="is-stable"></td>
+        </tr>
+        </tbody>
+        <tbody>
+        <tr>
+            <th colspan="100%">Time complexity</th>
+        </tr>
+        <tr class="time-complexity" id="time-best-row">
+            <th>Best</th>
+            <td id="time-best"></td>
+        </tr>
+        <tr class="time-complexity" id="time-avg-row">
+            <th>Average</th>
+            <td id="time-avg"></td>
+        </tr>
+        <tr class="time-complexity" id="time-worst-row">
+            <th>Worst</th>
+            <td id="time-worst"></td>
+        </tr>
+        <tr id="space-complexity-row">
+            <th>Space complexity</th>
+            <td id="space-complexity"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!--    <h4>Description</h4>-->
+    <p class="text" id="sort-description"></p>
+
+    <h4>Algorithm (pseudocode)</h4>
+    <pre class="code" id="algorithm"></pre>
+
+    <p class="text" id="algorithm-description"></p>
+</div>
+
+<script type="text/javascript">
+    code_keywords = [
+        'void', 'true', 'false',
+        'not', 'and', 'or',
+        'repeat', 'until', 'for', 'to', 'while',
+        'if', 'else', 'then', 'do',
+        'return'
+    ]
+    document.body.hidden = true;
+    document.setSortObject = function (newSortObject) {
+        document.body.hidden = false;
+        document.getElementById("sort-name").innerText = newSortObject.name;
+        document.getElementById("sort-description").innerHTML = newSortObject.description.trim()
+            .replace(/\n/g, '<br>');
+
+        if (newSortObject.statistics.stable != null) {
+            document.getElementById("is-stable").innerText = newSortObject.statistics.stable;
+        } else {
+            document.getElementById("is-stable").innerText = "N/A";
+        }
+
+        // dispComplexity(newSortObject.statistics.timeComplexity.best, "time-best")
+        // dispComplexity(newSortObject.statistics.timeComplexity.avg, "time-avg")
+        // dispComplexity(newSortObject.statistics.timeComplexity.worst, "time-worst")
+        // dispComplexity(newSortObject.statistics.spaceComplexity, "space-complexity")
+
+        let algText = newSortObject.algorithm.trim();
+        algText = algText.replace(new RegExp("\\b(" + code_keywords.join("|") + ")\\b", "gi"), w => `<b>${w}</b>`)
+            .replace(/(\/\/.*)/gm, '<span class="code-comment">$1</span>')
+        document.getElementById("algorithm").innerHTML = algText
+        document.getElementById("algorithm-description").innerHTML = newSortObject.algorithmDescription.trim()
+            .replace(/\n/g, '<br>').replace(/(\(\d+\))/g, '<span class="alg-label">$1</span>');
+
+    }
+
+    function dispComplexity(data, tag) {
+        if (data != null) {
+            document.getElementById(tag + "-row").hidden = false;
+            document.getElementById(tag).innerHTML = formatComplexity(data);
+        } else {
+            document.getElementById(tag + "-row").hidden = true;
+        }
+    }
+
+    function formatComplexity(s) {
+        // console.log(s.replace(/\^(\S*)/g, "<sup>$1</sup>"));
+        return s.replace(/\s*\^\s*{([^{}]+)}/g, "<sup>$1</sup>")
+            .replace(/\s*\^\s*(\S*)/g, "<sup>$1</sup>")
+            .replace(/([^{}\s<\/>]+)\s*\/\s*([^{}\s<\/>]+)/g,  // fractions
+                "<span class='frac'><sup>$1</sup><span>&frasl;</span><sub>$2</sub></span>")
+    }
+
+    document.setSortObject({
+        "name": "Bubble Sort",
+        "methodName": "bubbleSort",
+        "description": "A simple sorting algorithm that goes through the list, looking for adjacent elements that are out of order, swapping them if they are. This algorithm gets its name from how elements \"bubble\" to the end of the array.\n",
+        "statistics": {
+            "timeComplexity": {"best": "1", "avg": "n ^ 2", "worst": "n ^ 2"},
+            "spaceComplexity": "1",
+            "stable": null
+        },
+        "algorithm": "void bubblesort(arr)\n    end = arr.length\n    repeat\n        swapped = false\n        for i = 0 to end - 1 inclusive    // (1)\n            if arr[i] > arr[i+1]          // (2)\n                swap arr[i], arr[i+1]\n                swapped = true\n        end = end - 1                     // (3)\n    until not swapped                     // (4)\n",
+        "algorithmDescription": "This implementation of bubble sort has been optimized slightly, taking into account that every pass through the array will put at least one element into its sorted position, building a sorted part at the end. This means that we only need to loop through the unsorted part of the array.\nIn bubble sort, we loop through the array (1), looking for a pair of adjacent elements that are out of order (2). When we find one, we swap the two elements into the correct order, and continue. At the end of a pass, we can decrement the end index (3), because we know that at least one more item is definitely sorted. This process continues until we have no more swaps left to make (4).\n"
+    });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+body, html {
+    font-family: sans-serif;
+    padding: 0;
+    margin: 0;
+}
+
+#main {
+    margin: 15px;
+}
+
+.text {
+    line-height: 150%;
+}
+
+.code {
+    font-family: Consolas, monospace;
+    min-width: fit-content;
+    max-width: fit-content;
+    background-color: #f4f4f4;
+    padding: 20px;
+    overflow-x: scroll;
+}
+
+.code-comment {
+    font-style: italic;
+    color: #a5a5a5;
+}
+
+.alg-label {
+    font-family: Consolas, monospace;
+    font-size: 80%;
+    color: #505050;
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0;
+    padding: 0;
+}
+
+div#sort-name-header {
+    background-color: #efefef;
+    padding: 5px 40px;
+    position: sticky;
+    top: 0;
+}
+
+table#statistics-box {
+    border: 1px solid #b0b0b0;
+    float: right;
+    clear: right;
+    background-color: #eeeeee;
+    font-size: 80%;
+    margin-left: 25px;
+    margin-bottom: 15px;
+}
+
+th#statistics-box-title {
+    background-color: #cbcbcb;
+    padding: 5px 0;
+    margin: 0;
+    text-align: center;
+}
+
+tr.time-complexity th {
+    padding-left: 30px;
+}
+
+th, td {
+    text-align: left;
+    padding: 2px 10px;
+}
+
+tbody.table-hr {
+    border-bottom: 1px solid #b0b0b0;
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+}
+
+/*span.frac {*/
+/*    display: inline-block;*/
+/*    text-align: center;*/
+/*    vertical-align: middle;*/
+/*}*/
+/*span.frac > sup, span.frac > sub {*/
+/*    display: block;*/
+/*    font: inherit;*/
+/*    padding: 0 0.3em;*/
+/*}*/
+/*span.frac > sup {border-bottom: 0.08em solid;}*/
+/*span.frac > span {display: none;}*/

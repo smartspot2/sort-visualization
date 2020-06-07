@@ -1,0 +1,9 @@
+# IntelliJ config files
+.idea/
+*.iml
+
+# Production classes
+out/
+
+# Classes no longer in use or were updated
+unused/

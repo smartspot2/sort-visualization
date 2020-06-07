@@ -17,9 +17,8 @@ public class Item implements Comparable<Item> {
     public float y;
     public float h;   // Calculated in constructor
     public float w;   // For customization
-    public volatile float anchorX, anchorY;
     public int c;
-    public volatile boolean isSwapping = false;
+    public volatile boolean isAnimating = false;
     private int val;
     private volatile float dx, dy, dh;
     private String dispType; // Available: "rect", "dot"; defaults to "dot"
@@ -34,18 +33,6 @@ public class Item implements Comparable<Item> {
         this.c = Settings.ITEMCOLOR;
         this.h = this.val * Settings.vertScale + Settings.itemSpace * (this.val - 1);
         this.w = Settings.horizScale;
-    }
-
-    public static float calcX(int index, float padLeft) {
-        return padLeft + (Settings.horizScale + Settings.itemSpace) * index;
-    }
-
-    public float getAnchorX() {
-        return x + Settings.horizScale / 2f;
-    }
-
-    public float getAnchorY() {
-        return y - h + Settings.vertScale / 2f;
     }
 
     /**
@@ -79,8 +66,32 @@ public class Item implements Comparable<Item> {
         app.fill(255);
     }
 
+    public static float calcX(int index, float padLeft) {
+        return padLeft + (Settings.horizScale + Settings.itemSpace) * index;
+    }
+
+    public static float calcDX(int indexFrom, int indexTo) {
+        return (indexTo - indexFrom) * (Settings.horizScale + Settings.itemSpace);
+    }
+
     public float calcX(int index) {
         return this.x + (Settings.horizScale + Settings.itemSpace) * index;
+    }
+
+    /**
+     * Change item position and size for animation
+     *
+     * @param step float from 0 to 1, indicating progress to end of animation
+     * @param dx   overall x-axis displacement
+     * @param dy   overall y-axis displacement
+     * @param dh   overall height displacement
+     */
+    public void animateStep(float step, float dx, float dy, float dh) {
+        if (step < 0 || step > 1) throw new IllegalArgumentException("step must be between 0 and 1.");
+
+        this.setDX(step * dx);
+        this.setDY(step * dy);
+        this.setDH(step * dh);
     }
 
     public int getVal() {

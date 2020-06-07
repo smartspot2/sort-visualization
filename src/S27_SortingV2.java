@@ -170,7 +170,7 @@ public class S27_SortingV2 extends PApplet {
                 } else if (event.isControlDown() && Settings.swapFrames > 0) {
                     Settings.swapFrames--;
                     if (Settings.swapFrames == 0) {
-                        Settings.animateSwap = false;
+                        Settings.animateMovement = false;
                     }
                 } else if (!event.isShiftDown() && !event.isControlDown() && Settings.frameDelay > 0) {  // [
                     Settings.frameDelay--;
@@ -181,7 +181,7 @@ public class S27_SortingV2 extends PApplet {
                 } else if (event.isControlDown()) {
                     Settings.swapFrames++;
                     if (Settings.swapFrames > 0) {
-                        Settings.animateSwap = true;
+                        Settings.animateMovement = true;
                     }
                 } else {  // [
                     Settings.frameDelay++;
@@ -382,7 +382,7 @@ public class S27_SortingV2 extends PApplet {
         Settings.frameSkip = 5;
         Settings.itemSpace = 0;
         sorter.curDispType = 0;
-        Settings.animateSwap = false;
+        Settings.animateMovement = false;
         Settings.swapFrames = 0;
         Settings.randomItemHeights = false;
         Settings.compDelay = 0;
@@ -396,7 +396,7 @@ public class S27_SortingV2 extends PApplet {
         Settings.frameSkip = 0;
         Settings.itemSpace = 0;
         sorter.curDispType = 0;
-        Settings.animateSwap = true;
+        Settings.animateMovement = true;
         Settings.swapFrames = 10;
         Settings.randomItemHeights = false;
         Settings.compDelay = 120;
@@ -410,7 +410,7 @@ public class S27_SortingV2 extends PApplet {
         Settings.frameSkip = 5;
         Settings.itemSpace = 0;
         sorter.curDispType = 0;
-        Settings.animateSwap = false;
+        Settings.animateMovement = false;
         Settings.swapFrames = 0;
         Settings.randomItemHeights = true;
         Settings.compDelay = 0;
@@ -424,7 +424,7 @@ public class S27_SortingV2 extends PApplet {
         Settings.frameSkip = 0;
         Settings.itemSpace = 0;
         sorter.curDispType = 0;
-        Settings.animateSwap = true;
+        Settings.animateMovement = true;
         Settings.swapFrames = 10;
         Settings.randomItemHeights = true;
         Settings.compDelay = 120;

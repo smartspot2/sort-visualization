@@ -29,7 +29,7 @@ public class Settings {
     public static boolean randomItemHeights = false;
     public static int frameDelay = 5; // In milliseconds
     public static int frameSkip = 0;  // Frames to skip before redrawing
-    public static boolean animateSwap = false;  // Whether or not to animate swaps
+    public static boolean animateMovement = false;  // Whether or not to animate swaps
     public static int swapFrames = 0;  // Frames per swap; only matters if animateSwap is true
     public static boolean showComparisons = true;
     public static int compDelay = 0;  // Frames to pause after highlighting comparison

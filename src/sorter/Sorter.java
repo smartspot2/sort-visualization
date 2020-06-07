@@ -224,11 +224,11 @@ public class Sorter {
         }
         workingRangeLock.readLock().unlock();
 
-        for (boolean drawSwapping : new boolean[]{false, true}) {
+        for (boolean drawAnimatingItems : new boolean[]{false, true}) {
             arrLock.readLock().lock();
             for (int i = 0; i < arr.size(); i++) {
                 Item item = arr.get(i);
-                if (item.isSwapping == drawSwapping) {
+                if (item.isAnimating == drawAnimatingItems) {
                     item.show(i, Settings.getLayout(layoutMode).get("arrHeightScale"));
                 }
             }
@@ -238,7 +238,7 @@ public class Sorter {
                 auxilLock.readLock().lock();
                 for (int i = 0; i < auxil.size(); i++) {
                     Item item = auxil.get(i);
-                    if (item.isSwapping == drawSwapping) {
+                    if (item.isAnimating == drawAnimatingItems) {
                         item.show(i, Settings.getLayout(layoutMode).get("auxilHeightScale"));
                     }
                 }
@@ -248,7 +248,7 @@ public class Sorter {
                 int curIndex = 0;
                 for (List<Item> bucket : buckets) {
                     for (Item item : bucket) {
-                        if (item.isSwapping == drawSwapping) {
+                        if (item.isAnimating == drawAnimatingItems) {
                             item.show(curIndex, Settings.getLayout(layoutMode).get("bucketsHeightScale"));
                         }
                         curIndex++;
@@ -256,47 +256,10 @@ public class Sorter {
                 }
             }
 
-            if (tempItem != null && (tempItem.isSwapping == drawSwapping)) {
+            if (tempItem != null && (tempItem.isAnimating == drawAnimatingItems)) {
                 tempItem.show(0, Settings.getLayout(layoutMode).get("arrHeightScale"));
             }
-
         }
-
-        // Draw swapping items on top
-//        arrLock.readLock().lock();
-//        for (int i = 0; i < arr.size(); i++) {
-//            Item item = arr.get(i);
-//            if (item.isSwapping) {
-//                item.show(i, Settings.getLayout(layoutMode).get("arrHeightScale"));
-//            }
-//        }
-//        arrLock.readLock().unlock();
-//
-//        if (layoutMode.contains("auxil")) {
-//            auxilLock.readLock().lock();
-//            for (int i = 0; i < auxil.size(); i++) {
-//                Item item = auxil.get(i);
-//                if (item.isSwapping) {
-//                    item.show(i, Settings.getLayout(layoutMode).get("auxilHeightScale"));
-//                }
-//            }
-//            auxilLock.readLock().unlock();
-//        } else if (layoutMode.equals("buckets")) {
-//            bucketsLock.readLock().lock();
-//            int curIndex = 0;
-//            for (List<Item> bucket : buckets) {
-//                for (Item item : bucket) {
-//                    if (item.isSwapping) {
-//                        item.show(curIndex, Settings.getLayout(layoutMode).get("bucketsHeightScale"))
-//                    }
-//                    curIndex++;
-//                }
-//            }
-//        }
-//
-//        if (tempItem != null && tempItem.isSwapping) {
-//            tempItem.show(0, Settings.getLayout(layoutMode).get("arrHeightScale"));
-//        }
 
         animItemsLock.readLock().lock();
         if (!this.animItems.isEmpty()) {
@@ -394,6 +357,47 @@ public class Sorter {
 
     // -------------------- ARRAY ACTIONS --------------------
 
+    private void animateItems(Item[] items, int color, double[] dx_list, double[] dy_list, double[] dh_list) {
+        assert items.length == dx_list.length && dx_list.length == dy_list.length && dy_list.length == dh_list.length;
+
+        int[] prevColors = new int[items.length];
+
+        for (int i = 0; i < items.length; i++) {
+            Item item = items[i];
+            item.isAnimating = true;
+            prevColors[i] = item.c;
+            item.setColor(color);
+        }
+
+        float step = (1f + Settings.frameSkip) / Settings.swapFrames;
+        for (float curStep = 0; curStep < 1 + step; curStep += step) {
+            for (int i = 0; i < items.length; i++) {
+                items[i].animateStep(Math.min(1, curStep),
+                        (float) dx_list[i], (float) dy_list[i], (float) dh_list[i]);
+            }
+            updateDisp(0);
+        }
+
+        for (int i = 0; i < items.length; i++) {
+            Item item = items[i];
+            item.setDX(0);
+            item.setDY(0);
+            item.setDH(0);
+
+            item.setColor(prevColors[i]);
+            item.isAnimating = false;
+        }
+    }
+
+    private void animateItems(List<Item> items, int color,
+                              List<Double> dx_list, List<Double> dy_list, List<Double> dh_list) {
+        animateItems(items.toArray(new Item[0]), color,
+                dx_list.stream().mapToDouble(x -> x).toArray(),
+                dy_list.stream().mapToDouble(x -> x).toArray(),
+                dh_list.stream().mapToDouble(x -> x).toArray()
+        );
+    }
+
     /**
      * Swaps two items in the array.
      */
@@ -405,46 +409,28 @@ public class Sorter {
      * Swaps two items in the array.
      */
     private void swap(int i1, int i2, String stepCaption) {
+        if (i1 == i2) return;
         this.totalSwaps++;
         this.totalAccesses += 2;
 
         arrLock.readLock().lock();
 
-        int i1PrevColor = arr.get(i1).c;
-        int i2PrevColor = arr.get(i2).c;
-        if (Settings.animateSwap) {
-            arr.get(i1).isSwapping = true;
-            arr.get(i2).isSwapping = true;
-            arr.get(i1).setColor(Settings.SWAPCOLOR);
-            arr.get(i2).setColor(Settings.SWAPCOLOR);
-
+        if (Settings.animateMovement) {
             // Display caption while swapping
             this.caption = stepCaption;
 
             float i1InitX = arr.get(i1).calcX(i1);
             float i2InitX = arr.get(i2).calcX(i2);
 
-            for (double frame = 0; frame <= Settings.swapFrames; frame += 1 + Settings.frameSkip) {
-                float dx = (float) ((frame / Settings.swapFrames) * (i2InitX - i1InitX));
-                arr.get(i1).setDX(dx);
-                arr.get(i2).setDX(-dx);
-                updateDisp(0);
-            }
-
-            arr.get(i1).setDX(0);
-            arr.get(i2).setDX(0);
-
-            arr.get(i1).isSwapping = false;
-            arr.get(i2).isSwapping = false;
+            animateItems(new Item[]{arr.get(i1), arr.get(i2)}, Settings.SWAPCOLOR,
+                    new double[]{Item.calcDX(i1, i2), Item.calcDX(i2, i1)},
+                    new double[]{0, 0},
+                    new double[]{0, 0});
         }
+
         fastSwap(i1, i2);
         markStep(stepCaption);
         updateDisp(0);
-
-
-        // Reset colors; take swap into account
-        arr.get(i1).setColor(i2PrevColor);
-        arr.get(i2).setColor(i1PrevColor);
 
         arrLock.readLock().unlock();
     }
@@ -470,42 +456,23 @@ public class Sorter {
         this.totalSwaps += 1;
 
         arrLock.readLock().lock();
-        int tempPrevColor = this.tempItem.c;
-        int iPrevColor = arr.get(i).c;
 
-        if (Settings.animateSwap) {
-            this.tempItem.isSwapping = true;
-            arr.get(i).isSwapping = true;
-            this.tempItem.setColor(Settings.SWAPCOLOR);
-            arr.get(i).setColor(Settings.SWAPCOLOR);
-
+        if (Settings.animateMovement) {
             // Display caption while swapping
             this.caption = stepCaption;
 
             float initX = arr.get(i).calcX(i);
 
-            for (double frame = 0; frame <= Settings.swapFrames; frame += 1 + Settings.frameSkip) {
-                float dx = (float) ((frame / Settings.swapFrames) * (this.tempItem.x - initX));
-                this.tempItem.setDX(-dx);
-                arr.get(i).setDX(dx);
-                updateDisp(0);
-            }
-
-            this.tempItem.setDX(0);
-            arr.get(i).setDX(0);
-
-            this.tempItem.isSwapping = false;
-            arr.get(i).isSwapping = false;
+            animateItems(new Item[]{this.tempItem, arr.get(i)}, Settings.SWAPCOLOR,
+                    new double[]{initX - this.tempItem.x, this.tempItem.x - initX},
+                    new double[]{0, 0},
+                    new double[]{0, 0});
         }
 
         fastSwapTemp(i);
         markStep(stepCaption);
         updateDisp(0);
 
-
-        // Reset colors; take swap into account
-        this.tempItem.setColor(iPrevColor);
-        arr.get(i).setColor(tempPrevColor);
         arrLock.readLock().unlock();
     }
 
@@ -558,28 +525,14 @@ public class Sorter {
                 + (iTo == -1 ? arrTo.size() : iTo) * (Settings.horizScale + Settings.itemSpace);
 
 
-        if (Settings.animateSwap) {
-            arrFrom.get(iFrom).isSwapping = true;
-            arrFrom.get(iFrom).setColor(Settings.SWAPCOLOR);
-
+        if (Settings.animateMovement) {
             // Display caption while swapping
             this.caption = stepCaption;
 
-            float fromX = arrFrom.get(iFrom).calcX(iFrom);
-
-            for (double frame = 0; frame <= Settings.swapFrames; frame += 1 + Settings.frameSkip) {
-                double frameScale = frame / Settings.swapFrames;
-                float dx = (float) (frameScale * (finalX - fromX));
-                float dy = (float) (frameScale * (finalY - arrFrom.get(iFrom).y));
-                arrFrom.get(iFrom).setDX(dx);
-                arrFrom.get(iFrom).setDY(dy);
-                updateDisp(0);
-            }
-
-            arrFrom.get(iFrom).setDX(0);
-            arrFrom.get(iFrom).setDY(0);
-
-            arr.get(iFrom).isSwapping = false;
+            animateItems(new Item[]{arrFrom.get(iFrom)}, Settings.SWAPCOLOR,
+                    new double[]{Item.calcDX(iFrom, iTo)},
+                    new double[]{finalY - arrFrom.get(iFrom).y},
+                    new double[]{0, 0});
         }
         toLock.readLock().unlock();
 
@@ -782,25 +735,15 @@ public class Sorter {
         this.totalAccesses++;
         arrLock.readLock().lock();
 
-        int prevColor = arr.get(index).c;
-        arr.get(index).setColor(Settings.SWAPCOLOR);
-        if (Settings.animateSwap) {
-            arr.get(index).isSwapping = true;
-
-            for (double frame = 0; frame <= Settings.setFrames; frame += 1 + Settings.frameSkip) {
-                int dh = (int) ((frame / Settings.setFrames) * (arr.get(index).getVal() - newVal) * Settings.vertScale);
-                arr.get(index).setDH(dh);
-
-                updateDisp(0);
-            }
-
-            arr.get(index).setDH(0);
-            arr.get(index).isSwapping = false;
+        if (Settings.animateMovement) {
+            animateItems(new Item[]{arr.get(index)}, Settings.SWAPCOLOR,
+                    new double[]{0},
+                    new double[]{0},
+                    new double[]{(arr.get(index).getVal() - newVal) * Settings.vertScale});
         }
 
         arr.get(index).setVal(newVal);
         markStep(stepCaption);
-        arr.get(index).setColor(prevColor);
         updateDisp(0);
         arrLock.readLock().unlock();
     }
@@ -820,25 +763,16 @@ public class Sorter {
         if (this.tempItem == null) {
             createTempItem();
         }
-        int prevColor = this.tempItem.c;
-        this.tempItem.setColor(Settings.SWAPCOLOR);
-        if (Settings.animateSwap) {
-            this.tempItem.isSwapping = true;
 
-            for (double frame = 0; frame <= Settings.setFrames; frame += 1 + Settings.frameSkip) {
-                int dh = (int) ((frame / Settings.setFrames) * (this.tempItem.getVal() - newVal) * Settings.vertScale);
-                this.tempItem.setDH(dh);
-
-                updateDisp(0);
-            }
-
-            this.tempItem.setDH(0);
-            this.tempItem.isSwapping = false;
+        if (Settings.animateMovement) {
+            animateItems(new Item[]{this.tempItem}, Settings.SWAPCOLOR,
+                    new double[]{0},
+                    new double[]{0},
+                    new double[]{(this.tempItem.getVal() - newVal) * Settings.vertScale});
         }
 
         this.tempItem.setVal(newVal);
         markStep(stepCaption);
-        this.tempItem.setColor(prevColor);
         updateDisp(0);
     }
 
@@ -877,7 +811,6 @@ public class Sorter {
         }
         try {
             while (Settings.BYSTEP && !NEXTSTEP) {
-
                 Thread.sleep(100);
             }
         } catch (InterruptedException e) {
@@ -1894,41 +1827,40 @@ public class Sorter {
         float itemX = arrItem.calcX(itemIndex);
         arrItem.setVal(0);
 
-        if (Settings.animateSwap) {
+        if (Settings.animateMovement) {
             // Split item into blocks of val 1
             List<Item> splitList = new ArrayList<>();
+            List<Double> dx_list = new ArrayList<>();
+            List<Double> dy_list = new ArrayList<>();
+            List<Double> dh_list = new ArrayList<>();
             animItemsLock.writeLock().lock();
             for (int v = 0; v < arrVal; v++) {
                 // Split up bar into multiple items of value 1, stacked on top of each other
                 Item newItem = new Item(
                         this.app, 1,
-                        arrItem.calcX(itemIndex),
+                        itemX,
                         arrItem.y - v * Settings.getLayout(layoutMode).get("arrHeightScale") *
                                 (Settings.vertScale + Settings.itemSpace),
                         arrItem.getDispType()
                 );
                 newItem.setColor(Settings.SWAPCOLOR);
                 splitList.add(newItem);
-                if (Settings.animateSwap) {
+                dx_list.add((double) Item.calcDX(itemIndex, v));
+
+                float destY = Settings.getLayout(layoutMode).get("auxilBottom");
+                if (v < auxil.size()) {  // item y-coord in auxil, accounting for index in stack
+                    destY -= auxil.get(v).h * Settings.getLayout(layoutMode).get("arrHeightScale");
+                }
+                dy_list.add((double) (destY - newItem.y));
+
+                dh_list.add(0d);
+                if (Settings.animateMovement) {
                     animItems.add(newItem);
                 }
             }
             animItemsLock.writeLock().unlock();
 
-            for (double frame = 0; frame <= Settings.swapFrames; frame += 1 + Settings.frameSkip) {
-                double frameScale = frame / Settings.swapFrames;
-                for (int i = 0; i < splitList.size(); i++) {
-                    Item curItem = splitList.get(i);
-                    float destX = Item.calcX(i, Settings.padLeft);
-                    float destY = Settings.getLayout(layoutMode).get("auxilBottom");
-                    if (i < auxil.size()) {  // item y-coord in auxil, accounting for index in stack
-                        destY -= auxil.get(i).h * Settings.getLayout(layoutMode).get("arrHeightScale");
-                    }
-                    curItem.setDX((float) (frameScale * (destX - itemX)));
-                    curItem.setDY((float) (frameScale * (destY - curItem.y)));
-                }
-                updateDisp(0);
-            }
+            animateItems(splitList, Settings.SWAPCOLOR, dx_list, dy_list, dh_list);
 
             animItemsLock.writeLock().lock();
             for (Item animItem : splitList) {
@@ -1952,7 +1884,7 @@ public class Sorter {
         if (auxil.isEmpty()) {
             return;
         }
-        if (Settings.animateSwap) {
+        if (Settings.animateMovement) {
             Item emptyRow = new Item(this.app, 1,
                     Settings.getContentLeft(),
                     Settings.getLayout(layoutMode).get("auxilBottom"),
@@ -1966,6 +1898,9 @@ public class Sorter {
             animItemsLock.writeLock().unlock();
 
             List<Item> splitList = new ArrayList<>();
+            List<Double> dx_list = new ArrayList<>();
+            List<Double> dy_list = new ArrayList<>();
+            List<Double> dh_list = new ArrayList<>();
             auxilLock.readLock().lock();
             animItemsLock.writeLock().lock();
             for (int i = 0; i < auxil.size(); i++) {
@@ -1977,26 +1912,22 @@ public class Sorter {
                 );
                 newItem.setColor(Settings.SWAPCOLOR);
                 splitList.add(newItem);
-                if (Settings.animateSwap) {
+                dx_list.add((double) Item.calcDX(i, arrItemIndex));
+
+                float destY = arr.get(arrItemIndex).y  // Final item y-value
+                        - i * Settings.getLayout(layoutMode).get("auxilHeightScale")
+                        * (Settings.vertScale + Settings.itemSpace);  // Adjust for split item value
+                dy_list.add((double) (destY - auxil.get(i).y));
+
+                dh_list.add(0d);
+                if (Settings.animateMovement) {
                     animItems.add(newItem);
                 }
             }
             animItemsLock.writeLock().unlock();
             auxilLock.readLock().unlock();
 
-            for (double frame = 0; frame <= Settings.swapFrames; frame += 1 + Settings.frameSkip) {
-                double frameScale = frame / Settings.swapFrames;
-                for (int i = 0; i < splitList.size(); i++) {
-                    Item curItem = splitList.get(i);
-                    float destX = Item.calcX(arrItemIndex, Settings.getContentLeft());
-                    float destY = arr.get(arrItemIndex).y
-                            - i * Settings.getLayout(layoutMode).get("auxilHeightScale")
-                            * (Settings.vertScale + Settings.itemSpace);
-                    curItem.setDX((float) (frameScale * (destX - curItem.x)));
-                    curItem.setDY((float) (frameScale * (destY - curItem.y)));
-                }
-                updateDisp(0);
-            }
+            animateItems(splitList, Settings.SWAPCOLOR, dx_list, dy_list, dh_list);
 
             animItemsLock.writeLock().lock();
             for (Item animItem : splitList) {

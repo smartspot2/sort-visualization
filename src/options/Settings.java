@@ -34,6 +34,9 @@ public class Settings {
     public static boolean showComparisons = true;
     public static int compDelay = 0;  // Frames to pause after highlighting comparison
 
+    // Even when swapFrames = 0, still move items in groups
+    public static boolean moveFromAuxilInBlocks = false;
+
     public static float vertScale, horizScale;
     public static int NODERADIUS = 5;
 

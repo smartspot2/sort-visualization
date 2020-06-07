@@ -6,6 +6,7 @@ import processing.core.PApplet;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -357,9 +358,8 @@ public class Sorter {
 
     // -------------------- ARRAY ACTIONS --------------------
 
-    private void animateItems(Item[] items, int color, double[] dx_list, double[] dy_list, double[] dh_list) {
-        assert items.length == dx_list.length && dx_list.length == dy_list.length && dy_list.length == dh_list.length;
-
+    private void animateItems(Item[] items, int color, double[] dx_arr, double[] dy_arr, double[] dh_arr) {
+        assert items.length == dx_arr.length && dx_arr.length == dy_arr.length && dy_arr.length == dh_arr.length;
         int[] prevColors = new int[items.length];
 
         for (int i = 0; i < items.length; i++) {
@@ -373,7 +373,7 @@ public class Sorter {
         for (float curStep = 0; curStep < 1 + step; curStep += step) {
             for (int i = 0; i < items.length; i++) {
                 items[i].animateStep(Math.min(1, curStep),
-                        (float) dx_list[i], (float) dy_list[i], (float) dh_list[i]);
+                        (float) dx_arr[i], (float) dy_arr[i], (float) dh_arr[i]);
             }
             updateDisp(0);
         }
@@ -392,9 +392,15 @@ public class Sorter {
     private void animateItems(List<Item> items, int color,
                               List<Double> dx_list, List<Double> dy_list, List<Double> dh_list) {
         animateItems(items.toArray(new Item[0]), color,
-                dx_list.stream().mapToDouble(x -> x).toArray(),
-                dy_list.stream().mapToDouble(x -> x).toArray(),
-                dh_list.stream().mapToDouble(x -> x).toArray()
+                (dx_list == null || dx_list.size() == 0)
+                        ? new double[items.size()]
+                        : dx_list.stream().mapToDouble(x -> x).toArray(),
+                (dy_list == null || dy_list.size() == 0)
+                        ? new double[items.size()]
+                        : dy_list.stream().mapToDouble(x -> x == null ? 0 : x).toArray(),
+                (dh_list == null || dh_list.size() == 0)
+                        ? new double[items.size()]
+                        : dh_list.stream().mapToDouble(x -> (x == null ? 0 : x)).toArray()
         );
     }
 
@@ -424,8 +430,8 @@ public class Sorter {
 
             animateItems(new Item[]{arr.get(i1), arr.get(i2)}, Settings.SWAPCOLOR,
                     new double[]{Item.calcDX(i1, i2), Item.calcDX(i2, i1)},
-                    new double[]{0, 0},
-                    new double[]{0, 0});
+                    new double[2],
+                    new double[2]);
         }
 
         fastSwap(i1, i2);
@@ -465,8 +471,8 @@ public class Sorter {
 
             animateItems(new Item[]{this.tempItem, arr.get(i)}, Settings.SWAPCOLOR,
                     new double[]{initX - this.tempItem.x, this.tempItem.x - initX},
-                    new double[]{0, 0},
-                    new double[]{0, 0});
+                    new double[2],
+                    new double[2]);
         }
 
         fastSwapTemp(i);
@@ -493,7 +499,7 @@ public class Sorter {
      * @param stepCaption   current step caption
      */
     private void moveBetweenArrays(int iFrom, int iTo, List<Item> arrFrom, List<Item> arrTo,
-                                   boolean keepBlankItem, String stepCaption) {
+                                   boolean keepBlankItem, String stepCaption, boolean noUpdate) {
         this.totalSwaps++;
         this.totalAccesses += 1;
 
@@ -521,18 +527,14 @@ public class Sorter {
 
         int prevColor = arrFrom.get(iFrom).c;
 
-        float finalX = Settings.getContentLeft()
-                + (iTo == -1 ? arrTo.size() : iTo) * (Settings.horizScale + Settings.itemSpace);
-
-
-        if (Settings.animateMovement) {
+        if (!noUpdate && Settings.animateMovement) {
             // Display caption while swapping
             this.caption = stepCaption;
 
             animateItems(new Item[]{arrFrom.get(iFrom)}, Settings.SWAPCOLOR,
                     new double[]{Item.calcDX(iFrom, iTo)},
                     new double[]{finalY - arrFrom.get(iFrom).y},
-                    new double[]{0, 0});
+                    new double[2]);
         }
         toLock.readLock().unlock();
 
@@ -572,8 +574,10 @@ public class Sorter {
         }
         toLock.writeLock().unlock();
 
-        markStep(stepCaption);
-        updateDisp(0);
+        if (!noUpdate) {
+            markStep(stepCaption);
+            updateDisp(0);
+        }
 
         // Reset colors; take swap into account
         toLock.readLock().lock();
@@ -614,22 +618,16 @@ public class Sorter {
      * @param aux_i         index to insert/replace in auxiliary array
      * @param keepBlankItem whether to remove the item or keep it with value 0
      * @param stepCaption   current step caption
+     * @param noUpdate      don't update screen at all; no animation either
      */
+    private void moveToAuxil(int i, int aux_i, boolean keepBlankItem, String stepCaption, boolean noUpdate) {
+        moveBetweenArrays(i, aux_i, arr, auxil,
+                keepBlankItem, stepCaption, noUpdate);
+    }
+
     private void moveToAuxil(int i, int aux_i, boolean keepBlankItem, String stepCaption) {
         moveBetweenArrays(i, aux_i, arr, auxil,
-                keepBlankItem, stepCaption);
-    }
-
-    private void moveToAuxil(int i, boolean keepBlankItem, String stepCaption) {
-        moveToAuxil(i, -1, keepBlankItem, stepCaption);
-    }
-
-    private void moveToAuxil(int i, int aux_i, boolean keepBlankItem) {
-        moveToAuxil(i, aux_i, keepBlankItem, "Move element to auxiliary array");
-    }
-
-    private void moveToAuxil(int i, boolean keepBlankItem) {
-        moveToAuxil(i, -1, keepBlankItem);
+                keepBlankItem, stepCaption, false);
     }
 
     /**
@@ -640,22 +638,16 @@ public class Sorter {
      * @param i             index to insert/replace in array
      * @param keepBlankItem whether to remove the item or keep it with value 0
      * @param stepCaption   current step caption
+     * @param noUpdate      don't update screen at all; no animation either
      */
+    private void moveToArr(int aux_i, int i, boolean keepBlankItem, String stepCaption, boolean noUpdate) {
+        moveBetweenArrays(aux_i, i, auxil, arr,
+                keepBlankItem, stepCaption, noUpdate);
+    }
+
     private void moveToArr(int aux_i, int i, boolean keepBlankItem, String stepCaption) {
         moveBetweenArrays(aux_i, i, auxil, arr,
-                keepBlankItem, stepCaption);
-    }
-
-    private void moveToArr(int aux_i, boolean keepBlankItem, String stepCaption) {
-        moveToArr(aux_i, -1, keepBlankItem, stepCaption);
-    }
-
-    private void moveToArr(int aux_i, int i, boolean keepBlankItem) {
-        moveToArr(aux_i, i, keepBlankItem, "Move element from auxiliary to array");
-    }
-
-    private void moveToArr(int aux_i, boolean keepBlankItem) {
-        moveToArr(aux_i, -1, keepBlankItem);
+                keepBlankItem, stepCaption, false);
     }
 
     /**
@@ -737,8 +729,8 @@ public class Sorter {
 
         if (Settings.animateMovement) {
             animateItems(new Item[]{arr.get(index)}, Settings.SWAPCOLOR,
-                    new double[]{0},
-                    new double[]{0},
+                    new double[1],
+                    new double[1],
                     new double[]{(arr.get(index).getVal() - newVal) * Settings.vertScale});
         }
 
@@ -766,8 +758,8 @@ public class Sorter {
 
         if (Settings.animateMovement) {
             animateItems(new Item[]{this.tempItem}, Settings.SWAPCOLOR,
-                    new double[]{0},
-                    new double[]{0},
+                    new double[1],
+                    new double[1],
                     new double[]{(this.tempItem.getVal() - newVal) * Settings.vertScale});
         }
 
@@ -1104,8 +1096,20 @@ public class Sorter {
         }
 
         // Copy to arr
+        if (Settings.moveFromAuxilInBlocks || Settings.swapFrames > 0) {
+            double[] dy_arr = new double[j - i];
+            Arrays.fill(dy_arr,
+                    Settings.getLayout(layoutMode).get("arrBottom")
+                            - Settings.getLayout(layoutMode).get("auxilBottom")
+            );
+            animateItems(auxil.subList(i, j).toArray(new Item[0]), Settings.SWAPCOLOR,
+                    new double[j - i], dy_arr, new double[j - i]);
+        }
+
         for (int arrIndex = i; arrIndex < j; arrIndex++) {
-            moveToArr(arrIndex, arrIndex, true, "Set merged array item");
+            // no animation if moving in blocks
+            moveToArr(arrIndex, arrIndex, true, "Set merged array item",
+                    Settings.moveFromAuxilInBlocks || Settings.swapFrames > 0);
         }
 
         removeEmptyAuxilItems();
@@ -1832,7 +1836,6 @@ public class Sorter {
             List<Item> splitList = new ArrayList<>();
             List<Double> dx_list = new ArrayList<>();
             List<Double> dy_list = new ArrayList<>();
-            List<Double> dh_list = new ArrayList<>();
             animItemsLock.writeLock().lock();
             for (int v = 0; v < arrVal; v++) {
                 // Split up bar into multiple items of value 1, stacked on top of each other
@@ -1852,15 +1855,13 @@ public class Sorter {
                     destY -= auxil.get(v).h * Settings.getLayout(layoutMode).get("arrHeightScale");
                 }
                 dy_list.add((double) (destY - newItem.y));
-
-                dh_list.add(0d);
                 if (Settings.animateMovement) {
                     animItems.add(newItem);
                 }
             }
             animItemsLock.writeLock().unlock();
 
-            animateItems(splitList, Settings.SWAPCOLOR, dx_list, dy_list, dh_list);
+            animateItems(splitList, Settings.SWAPCOLOR, dx_list, dy_list, null);
 
             animItemsLock.writeLock().lock();
             for (Item animItem : splitList) {
@@ -1900,7 +1901,6 @@ public class Sorter {
             List<Item> splitList = new ArrayList<>();
             List<Double> dx_list = new ArrayList<>();
             List<Double> dy_list = new ArrayList<>();
-            List<Double> dh_list = new ArrayList<>();
             auxilLock.readLock().lock();
             animItemsLock.writeLock().lock();
             for (int i = 0; i < auxil.size(); i++) {
@@ -1918,8 +1918,6 @@ public class Sorter {
                         - i * Settings.getLayout(layoutMode).get("auxilHeightScale")
                         * (Settings.vertScale + Settings.itemSpace);  // Adjust for split item value
                 dy_list.add((double) (destY - auxil.get(i).y));
-
-                dh_list.add(0d);
                 if (Settings.animateMovement) {
                     animItems.add(newItem);
                 }
@@ -1927,7 +1925,7 @@ public class Sorter {
             animItemsLock.writeLock().unlock();
             auxilLock.readLock().unlock();
 
-            animateItems(splitList, Settings.SWAPCOLOR, dx_list, dy_list, dh_list);
+            animateItems(splitList, Settings.SWAPCOLOR, dx_list, dy_list, null);
 
             animItemsLock.writeLock().lock();
             for (Item animItem : splitList) {

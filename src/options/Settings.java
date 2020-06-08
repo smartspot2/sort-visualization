@@ -16,6 +16,7 @@ public class Settings {
     public static final int HEAPCOMPLINECOLOR = 0xFF008800;
     public static final int SORTEDITEMCOLOR = 0xFFFF3333;
     public static final int[] HEAPBARCOLORS = {0xFF03899C, 0xFF7908AA, 0xFFF3FD00, 0xFFFF7A00};
+    public static final int[] BUCKETLABELCOLORS = {0xFF212121, 0xFF424242};
     public static final String[] VALID_DISPTYPES = {"rect", "dot"};
     public static final boolean fastRandomize = true;
     public static final int randRange = 10;

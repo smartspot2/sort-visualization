@@ -3,12 +3,8 @@ package sorter;
 import javafx.util.Pair;
 import options.Settings;
 import processing.core.PApplet;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static processing.core.PConstants.CENTER;
@@ -51,7 +47,7 @@ public class Sorter {
     private volatile List<Item> arr;
     private volatile List<Item> auxil;
     private volatile List<Item> auxil2;
-    private volatile List<List<Item>> buckets;
+    private volatile LinkedHashMap<String, List<Item>> buckets;
     /**
      * Item on left side of array for temp storage
      */
@@ -187,17 +183,14 @@ public class Sorter {
 
                 auxil = null;
                 auxil2 = null;
-                buckets = new ArrayList<>(10);
+                buckets = new LinkedHashMap<>(10);
 
-                for (int i = 0; i < 10; i++) {
-                    buckets.add(new ArrayList<>());
-                }
                 for (Item item : arr) {
                     item.y = Settings.getLayout("buckets").get("arrBottom");
                 }
-                throw new NotImplementedException();
+                break;
             default:
-                throw new IllegalStateException("Unexpected value: " + newLayout);
+                throw new IllegalStateException("Unexpected layout mode: " + newLayout);
         }
         arrLock.readLock().unlock();
         auxilLock.writeLock().unlock();
@@ -247,14 +240,39 @@ public class Sorter {
             } else if (layoutMode.equals("buckets")) {
                 bucketsLock.readLock().lock();
                 int curIndex = 0;
-                for (List<Item> bucket : buckets) {
+                int bucketLabelColorIndex = 0;
+                for (String bucketName : buckets.keySet()) {
+                    List<Item> bucket = buckets.get(bucketName);
+                    float startX = Item.calcX(curIndex, Settings.padLeft);
+                    float bottomY = Settings.getContentBottom();
+                    // Draw labels for buckets
+                    if (bucket.size() > 0) {
+                        float bucketWidth = Item.calcDX(curIndex, curIndex + bucket.size());
+                        float centerX = Item.calcX(curIndex, Settings.padLeft)
+                                + bucketWidth / 2;
+
+                        this.app.noStroke();
+                        // TODO: decide whether colors are fixed (color index always incremented)
+                        //  or whether the color index should only increment if the bucket label is drawn
+                        this.app.fill(Settings.BUCKETLABELCOLORS[bucketLabelColorIndex]);
+                        this.app.rect(startX + 1, bottomY + 5,
+                                bucketWidth - 2, 15);
+
+                        this.app.fill(255);
+                        this.app.textSize(12);
+                        this.app.text(bucketName, centerX, bottomY + 17);
+                    }
+
                     for (Item item : bucket) {
                         if (item.isAnimating == drawAnimatingItems) {
                             item.show(curIndex, Settings.getLayout(layoutMode).get("bucketsHeightScale"));
                         }
                         curIndex++;
                     }
+
+                    bucketLabelColorIndex = (bucketLabelColorIndex + 1) % Settings.BUCKETLABELCOLORS.length;
                 }
+                bucketsLock.readLock().unlock();
             }
 
             if (tempItem != null && (tempItem.isAnimating == drawAnimatingItems)) {
@@ -358,15 +376,17 @@ public class Sorter {
 
     // -------------------- ARRAY ACTIONS --------------------
 
-    private void animateItems(Item[] items, int color, double[] dx_arr, double[] dy_arr, double[] dh_arr) {
+    private void animateItems(Item[] items, Integer color, double[] dx_arr, double[] dy_arr, double[] dh_arr) {
         assert items.length == dx_arr.length && dx_arr.length == dy_arr.length && dy_arr.length == dh_arr.length;
         int[] prevColors = new int[items.length];
 
         for (int i = 0; i < items.length; i++) {
             Item item = items[i];
             item.isAnimating = true;
-            prevColors[i] = item.c;
-            item.setColor(color);
+            if (color != null) {
+                prevColors[i] = item.c;
+                item.setColor(color);
+            }
         }
 
         float step = (1f + Settings.frameSkip) / Settings.swapFrames;
@@ -384,12 +404,14 @@ public class Sorter {
             item.setDY(0);
             item.setDH(0);
 
-            item.setColor(prevColors[i]);
+            if (color != null) {
+                item.setColor(prevColors[i]);
+            }
             item.isAnimating = false;
         }
     }
 
-    private void animateItems(List<Item> items, int color,
+    private void animateItems(List<Item> items, Integer color,
                               List<Double> dx_list, List<Double> dy_list, List<Double> dh_list) {
         animateItems(items.toArray(new Item[0]), color,
                 (dx_list == null || dx_list.size() == 0)
@@ -1375,6 +1397,8 @@ public class Sorter {
      */
     @Sort(dispName = "Radix Sort (LSD)")
     public void lsdRadixSort() {
+        changeLayout("buckets");
+
         // Get maximum value of arr
         int maxVal = getItemVal(0);
         for (Item it : arr) {
@@ -1384,9 +1408,9 @@ public class Sorter {
         // Get the most amount of digits in array values
         int maxDigits = ("" + maxVal).length();
 
-        List<List<Integer>> buckets = new ArrayList<>(10);  // Values with each digit
+        buckets = new LinkedHashMap<>(10);  // Values with each digit
         for (int i = 0; i < 10; i++) {
-            buckets.add(new ArrayList<>());
+            buckets.put(Integer.toString(i), new ArrayList<>());
         }
 
         // Radix sort
@@ -1397,25 +1421,145 @@ public class Sorter {
                 int curVal = getItemVal(i);
                 int curDigit = (int) (curVal / (Math.pow(10, exp))) % 10;
 
-                buckets.get(curDigit).add(curVal);
+                moveToBucket(i, -1, Integer.toString(curDigit),
+                        "Add item to bucket " + curDigit + " (" + (int) Math.pow(10, exp) + "s place)");
+
+                if (BREAK) break;
             }
 
             // Set array values
             int curBucket = 0;
             int arrIndex = 0;
             while (curBucket < 10) {
-                if (buckets.get(curBucket).size() > 0) {
-                    setItemVal(arrIndex, buckets.get(curBucket).remove(0),
+                if (buckets.get(Integer.toString(curBucket)).size() > 0) {
+                    moveFromBucket(0, Integer.toString(curBucket), arrIndex,
                             "Set items for digit " + curBucket + " in " + (int) Math.pow(10, exp) + "s place");
                     arrIndex++;
                 } else {
-                    if (BREAK) return;
+                    if (BREAK) break;
                     curBucket++;
                 }
             }
 
             // Buckets are now all empty, so don't need to reset buckets
+            if (BREAK) break;
         }
+
+        changeLayout("normal");
+    }
+
+    private void moveToBucket(int arr_i, int bucket_i, String bucketName, String stepCaption) {
+        bucketsLock.readLock().lock();
+        assert buckets.containsKey(bucketName);
+        Item arrItem = arr.get(arr_i);
+        if (bucket_i == -1) {
+            // Set target index to bucket size if -1 specified
+            bucket_i = buckets.get(bucketName).size();
+        }
+
+        arrLock.readLock().lock();
+        if (Settings.animateMovement) {
+            animateItemAndShift(arrItem, arr_i, bucket_i, bucketName, 1);
+        }
+        bucketsLock.readLock().unlock();
+
+        bucketsLock.writeLock().lock();
+        // Keep arr item, set value to 0
+        Item newItem = new Item(this.app, arrItem.getVal(), arrItem.x,
+                Settings.getLayout(layoutMode).get("bucketsBottom"),
+                arrItem.getDispType());
+        buckets.get(bucketName).add(bucket_i, newItem);
+        arrItem.setVal(0);
+
+        bucketsLock.writeLock().unlock();
+        arrLock.readLock().unlock();
+
+        markStep(stepCaption);
+        updateDisp(0);
+    }
+
+    private void moveFromBucket(int bucket_i, String bucketName, int arr_i, String stepCaption) {
+        this.totalAccesses++;
+        bucketsLock.readLock().lock();
+        assert buckets.containsKey(bucketName);
+        assert bucket_i > 0;
+        Item bucketItem = buckets.get(bucketName).get(bucket_i);
+
+        arrLock.readLock().lock();
+        if (Settings.animateMovement) {
+            animateItemAndShift(bucketItem, arr_i, bucket_i, bucketName, -1);
+        }
+        bucketsLock.readLock().unlock();
+
+        bucketsLock.writeLock().lock();
+        buckets.get(bucketName).remove(bucket_i);
+        Item newItem = new Item(this.app, bucketItem.getVal(), bucketItem.x,
+                Settings.getLayout(layoutMode).get("arrBottom"),
+                bucketItem.getDispType());
+        if (arr.get(arr_i).getVal() == 0) {
+            arr.set(arr_i, newItem);
+            arrLock.readLock().unlock();
+        } else {
+            arrLock.readLock().unlock();
+            arrLock.writeLock().lock();
+            arr.add(arr_i, newItem);
+            arrLock.writeLock().unlock();
+        }
+
+        bucketsLock.writeLock().unlock();
+
+        markStep(stepCaption);
+        updateDisp(0);
+    }
+
+    private void animateItemAndShift(Item item, int arr_i, int bucket_i, String bucketName, int shiftDirection) {
+        assert shiftDirection == 1 || shiftDirection == -1;
+
+        // Find item index with previous buckets
+        int allBucketItems_i = 0;
+        boolean passedBucket = false;
+        List<Item> itemsToAnimate = new ArrayList<>();
+
+        for (String s : buckets.keySet()) {
+            List<Item> curBucket = buckets.get(s);
+            if (s.equals(bucketName)) {
+                allBucketItems_i += bucket_i;
+                passedBucket = true;
+                // Rest of items in bucket must move to the right
+                if (bucket_i + 1 < curBucket.size()) {
+                    itemsToAnimate.addAll(curBucket.subList(bucket_i + 1, curBucket.size()));
+                }
+            } else if (!passedBucket) {
+                allBucketItems_i += curBucket.size();
+            } else {
+                // Passed target bucket; all other items must move right
+                itemsToAnimate.addAll(curBucket);
+            }
+        }
+        itemsToAnimate.add(item);
+
+        List<Double> dx_list = new ArrayList<>();
+        double shiftByOne = Item.calcDX(0, shiftDirection);  // dx for rest of items
+        for (int k = 1; k < itemsToAnimate.size(); k++) {
+            dx_list.add(shiftByOne);
+        }
+        // dx for array item, with shift direction
+        dx_list.add((double) Item.calcDX(arr_i, allBucketItems_i) * shiftDirection);
+
+        List<Double> dy_list = new ArrayList<>();
+        for (int k = 1; k < itemsToAnimate.size(); k++) {
+            dy_list.add(0d);
+        }
+        // dy for array item; difference between bottom y-values, with shift direction
+        dy_list.add((double) (Settings.getLayout(layoutMode).get("bucketsBottom")
+                - Settings.getLayout(layoutMode).get("arrBottom")) * shiftDirection);
+
+        // TODO: make array item animation in front of others (probably not easily doable)
+        int arrItemPrevColor = item.c;
+        item.setColor(Settings.SWAPCOLOR);  // Manually set item color; other items shouldn't be colored
+        animateItems(itemsToAnimate, null,
+                dx_list, dy_list, null);
+        item.setColor(arrItemPrevColor);
     }
 
     /**
